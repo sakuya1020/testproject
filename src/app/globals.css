@@ -1,0 +1,231 @@
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --text: #18202f;
+  --muted: #667085;
+  --line: #d9e0ea;
+  --primary: #1f6feb;
+  --primary-dark: #1b56b3;
+  --danger: #c2410c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.page {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 48px;
+}
+
+.pageHeader,
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pageHeader {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 18px;
+}
+
+.formGrid,
+.editGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+}
+
+input:focus {
+  outline: 3px solid #cfe2ff;
+  border-color: var(--primary);
+}
+
+.wide {
+  grid-column: span 2;
+}
+
+.actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+button,
+.downloadButton {
+  border: 0;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 16px;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+button:hover,
+.downloadButton:hover {
+  background: var(--primary-dark);
+}
+
+.empty {
+  margin: 16px 0 0;
+  color: var(--muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+}
+
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 0;
+}
+
+summary {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.7fr 0.7fr 0.8fr 1.6fr 0.6fr;
+  gap: 12px;
+  padding: 14px 10px;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+summary span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.editGrid {
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  padding: 16px 10px 12px;
+  background: #f8fafc;
+  border-top: 1px solid var(--line);
+}
+
+.rowActions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.deleteForm {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 10px 14px;
+  background: #f8fafc;
+}
+
+.deleteForm button {
+  background: var(--danger);
+}
+
+@media (max-width: 760px) {
+  .page {
+    width: min(100% - 20px, 1180px);
+    padding-top: 20px;
+  }
+
+  .pageHeader,
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .formGrid,
+  .editGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .wide {
+    grid-column: auto;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  button,
+  .downloadButton {
+    width: 100%;
+    text-align: center;
+  }
+}

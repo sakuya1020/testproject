@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Attendance {
+  id            Int      @id @default(autoincrement())
+  name          String
+  workDate      DateTime
+  clockIn       String
+  clockOut      String
+  breakMinutes  Int
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
