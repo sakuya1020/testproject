@@ -1,13 +1,14 @@
 # testproject
 
-勤怠入力サイトのローカルプロトタイプです。Next.js + TypeScript を使い、Prisma 経由で SQLite に勤怠データを保存します。
+勤怠入力サイトのプロトタイプです。Next.js + TypeScript を使い、Prisma 経由で PostgreSQL に勤怠データを保存します。Railway での公開を想定した構成です。
 
 ## 実装方針
 
-- Next.js App Router の Server Components / Server Actions を使い、画面と保存処理を小さく構成する
-- SQLite はローカル開発用DBとして `prisma/dev.db` に作成する
+- Next.js App Router の Server Components / Server Actions で画面と保存処理を構成する
+- データベースは Railway PostgreSQL を使う
 - Prisma schema の `Attendance` モデルで「氏名」「勤務日」「出勤時刻」「退勤時刻」「休憩時間」「備考」を管理する
 - CSV は `/api/attendance/csv` の Route Handler で生成する
+- Railway の pre-deploy command で `npx prisma migrate deploy` を実行し、デプロイ前にDB migrationを適用する
 - プロトタイプとしてログイン、権限、承認ワークフローは対象外にする
 
 ## ファイル構成
@@ -15,6 +16,7 @@
 ```text
 .
 ├── prisma/
+│   ├── migrations/
 │   └── schema.prisma
 ├── src/
 │   ├── app/
@@ -27,12 +29,13 @@
 │       ├── attendance.ts
 │       └── prisma.ts
 ├── .env.example
+├── railway.json
 ├── package.json
 ├── tsconfig.json
 └── README.md
 ```
 
-## セットアップ手順
+## ローカルセットアップ
 
 1. 依存関係をインストールする
 
@@ -40,31 +43,46 @@
    npm install
    ```
 
-2. 環境変数ファイルを作成する
+2. PostgreSQL の接続文字列を用意する
+
+   Railway PostgreSQL、またはローカル PostgreSQL の `DATABASE_URL` を使います。
+
+3. 環境変数ファイルを作成する
 
    ```powershell
    Copy-Item .env.example .env
    ```
 
-3. Prisma のマイグレーションを実行する
+   `.env` の `DATABASE_URL` を実際の PostgreSQL 接続文字列に変更してください。
+
+4. Prisma の migration を実行する
 
    ```powershell
    npm run prisma:migrate
    ```
 
-   このコマンドは、初回実行時に空の `prisma/dev.db` を作成してから Prisma migration を適用します。
-
-4. 開発サーバーを起動する
+5. 開発サーバーを起動する
 
    ```powershell
    npm run dev
    ```
 
-5. ブラウザで開く
+6. ブラウザで開く
 
    ```text
    http://localhost:3000
    ```
+
+## Railway公開手順
+
+1. Railway Dashboard で `sakuya1020/testproject` を選び、GitHub repo からサービスを作成する
+2. Railway のプロジェクトで `+ New` から PostgreSQL を追加する
+3. Next.js サービスの Variables で PostgreSQL の `DATABASE_URL` を参照変数として追加する
+4. デプロイする
+5. `railway.json` の pre-deploy command により `npx prisma migrate deploy` が実行される
+6. デプロイ完了後、Railway の公開URLを開いて動作確認する
+
+Railway の公式ガイドでは、Next.js の standalone build と PostgreSQL 接続、Prisma migration の pre-deploy command が推奨されています。
 
 ## 動作確認手順
 
@@ -78,18 +96,14 @@
 
    ```powershell
    npm run lint
+   npm run build
    ```
 
 ## 実装時に確認したこと
 
-- `npm run prisma:migrate` で SQLite DB と Prisma Client を作成できること
 - `npm run lint` が成功すること
 - `npm run build` が成功すること
-- 開発サーバーでトップページが HTTP 200 を返すこと
-- Prisma Client 経由で保存、更新、削除ができること
-- `/api/attendance/csv` が CSV を返すこと
-
-開発サーバーは `npm run dev` で起動する一時的なプロセスです。ターミナルを閉じる、プロセスを停止する、または Windows を終了すると停止します。
+- Prisma schema が PostgreSQL provider として valid であること
 
 ## 残課題
 
@@ -98,4 +112,4 @@
 - 月次集計、検索、絞り込み
 - 削除前の確認ダイアログ
 - CSV の文字コードや項目形式の業務要件への調整
-- 本番運用向けDB、バックアップ、監査ログの検討
+- 本番運用向けバックアップ、監査ログの検討
