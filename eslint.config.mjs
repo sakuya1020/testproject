@@ -16,6 +16,7 @@ const eslintConfig = [
       "node_modules/**",
       "next-env.d.ts",
       "prisma/migrations/**",
+      "scripts/prepare-standalone.cjs",
       "scripts/start-railway.cjs",
       "work/**"
     ]
