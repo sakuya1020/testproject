@@ -193,7 +193,7 @@ button:disabled {
 .entryHead,
 .entryRow {
   display: grid;
-  grid-template-columns: 72px 100px 56px 70px 70px minmax(180px, 1fr) 96px 96px 72px minmax(260px, 1.5fr);
+  grid-template-columns: 100px 56px 70px 70px minmax(180px, 1fr) 96px 96px 72px minmax(260px, 1.5fr);
   gap: 8px;
   min-width: 1120px;
   align-items: center;
@@ -214,12 +214,6 @@ button:disabled {
 
 .entryRow:last-child {
   border-bottom: 0;
-}
-
-.rowLabel {
-  color: #344054;
-  font-weight: 700;
-  font-size: 0.86rem;
 }
 
 .checkboxCell {

@@ -14,8 +14,6 @@ type Props = {
   initialEntries: WorkEntryView[];
 };
 
-const defaultRows = ["午前", "午後", "残業"];
-
 export function MonthAttendanceForm({ month, initialEntries }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(month);
   const [showWeekends, setShowWeekends] = useState(false);
@@ -99,7 +97,6 @@ export function MonthAttendanceForm({ month, initialEntries }: Props) {
 
               <div className="entryTable">
                 <div className="entryHead">
-                  <span>区分</span>
                   <span>オーダー</span>
                   <span>移動</span>
                   <span>工程</span>
@@ -112,7 +109,6 @@ export function MonthAttendanceForm({ month, initialEntries }: Props) {
                 </div>
                 {dayEntries.map(({ entry, index }) => (
                   <div className="entryRow" key={`${entry.date}-${entry.rowIndex}`}>
-                    <span className="rowLabel">{defaultRows[entry.rowIndex] ?? `追加${entry.rowIndex - 2}`}</span>
                     <input
                       aria-label={`${day.date} オーダー`}
                       maxLength={9}

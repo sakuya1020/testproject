@@ -117,7 +117,6 @@ export function calculateWorkHours(startTime: string, endTime: string): string {
 export function workEntriesToCsv(entries: WorkEntry[]): string {
   const header = [
     "日付",
-    "行",
     "オーダー",
     "移動",
     "工程",
@@ -130,7 +129,6 @@ export function workEntriesToCsv(entries: WorkEntry[]): string {
   ];
   const rows = entries.map((entry) => [
     formatDateKey(entry.workDate),
-    String(entry.rowIndex + 1),
     entry.orderCode,
     entry.isTravel ? "1" : "0",
     entry.process,
