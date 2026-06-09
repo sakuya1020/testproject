@@ -1,15 +1,29 @@
 # testproject
 
-勤怠入力サイトのプロトタイプです。Next.js + TypeScript を使い、Prisma 経由で PostgreSQL に勤怠データを保存します。Railway での公開を想定した構成です。
+勤怠入力サイトのプロトタイプです。Next.js + TypeScript を使い、Prisma 経由で PostgreSQL に勤怠データを保存します。Railway で公開する構成です。
 
-## 実装方針
+## 現在の仕様
 
-- Next.js App Router の Server Components / Server Actions で画面と保存処理を構成する
-- データベースは Railway PostgreSQL を使う
-- Prisma schema の `Attendance` モデルで「氏名」「勤務日」「出勤時刻」「退勤時刻」「休憩時間」「備考」を管理する
-- CSV は `/api/attendance/csv` の Route Handler で生成する
-- Railway の pre-deploy command で `npx prisma migrate deploy` を実行し、デプロイ前にDB migrationを適用する
-- プロトタイプとしてログイン、権限、承認ワークフローは対象外にする
+- 年月を画面全体で指定する
+- 指定月の1か月分の日別入力欄を最初から表示する
+- 土日は初期非表示
+- 「土日を表示」ボタンで土日を表示し、再押下で非表示に戻す
+- 土日に入力がある場合、その日は非表示モードでも表示したままにする
+- 各日は初期3行（午前、午後、残業）を表示する
+- 行は日別に追加できる
+- 空行は保存しない
+
+## 入力項目
+
+- オーダー: 半角のみ、最大9文字
+- 移動時間: チェックボックス
+- 工程: アルファベット2文字
+- 詳細: 数字2桁
+- オーダー名
+- 勤務開始時間
+- 勤務終了時間
+- 作業内容
+- 稼働時間: 勤務開始時間と勤務終了時間から自動表示
 
 ## ファイル構成
 
@@ -18,21 +32,23 @@
 ├── prisma/
 │   ├── migrations/
 │   └── schema.prisma
+├── scripts/
+│   ├── prepare-standalone.cjs
+│   └── start-railway.cjs
 ├── src/
 │   ├── app/
 │   │   ├── api/attendance/csv/route.ts
+│   │   ├── api/health/route.ts
 │   │   ├── actions.ts
 │   │   ├── globals.css
 │   │   ├── layout.tsx
+│   │   ├── MonthAttendanceForm.tsx
 │   │   └── page.tsx
 │   └── lib/
 │       ├── attendance.ts
 │       └── prisma.ts
-├── .env.example
 ├── railway.json
-├── package.json
-├── tsconfig.json
-└── README.md
+└── package.json
 ```
 
 ## ローカルセットアップ
@@ -43,19 +59,15 @@
    npm install
    ```
 
-2. PostgreSQL の接続文字列を用意する
-
-   Railway PostgreSQL、またはローカル PostgreSQL の `DATABASE_URL` を使います。
-
-3. 環境変数ファイルを作成する
+2. 環境変数ファイルを作成する
 
    ```powershell
    Copy-Item .env.example .env
    ```
 
-   `.env` の `DATABASE_URL` を実際の PostgreSQL 接続文字列に変更してください。
+3. `.env` の `DATABASE_URL` を PostgreSQL 接続文字列に変更する
 
-4. Prisma の migration を実行する
+4. Prisma migration を実行する
 
    ```powershell
    npm run prisma:migrate
@@ -73,43 +85,37 @@
    http://localhost:3000
    ```
 
-## Railway公開手順
+## Railway公開
 
-1. Railway Dashboard で `sakuya1020/testproject` を選び、GitHub repo からサービスを作成する
-2. Railway のプロジェクトで `+ New` から PostgreSQL を追加する
-3. Next.js サービスの Variables で PostgreSQL の `DATABASE_URL` を参照変数として追加する
-4. デプロイする
-5. `railway.json` の pre-deploy command により `npx prisma migrate deploy` が実行される
-6. デプロイ完了後、Railway の公開URLを開いて動作確認する
+- `railway.json` で Railway の build / deploy / healthcheck を設定しています
+- pre-deploy command で `npx prisma migrate deploy` を実行します
+- healthcheck は `/api/health` を使います
+- standalone build 用に、build 後に `.next/static` を `.next/standalone/.next/static` へコピーします
 
-Railway の公式ガイドでは、Next.js の standalone build と PostgreSQL 接続、Prisma migration の pre-deploy command が推奨されています。
+## 動作確認
 
-## 動作確認手順
+```powershell
+npm run lint
+npm run build
+```
 
-1. トップページで「氏名」「勤務日」「出勤時刻」「退勤時刻」「休憩時間」「備考」を入力して保存する
-2. 保存済みデータ一覧に入力内容が表示されることを確認する
-3. 一覧の行を開き、値を変更して「更新」を押す
-4. 更新後の値が一覧に反映されることを確認する
-5. 「削除」を押し、対象行が一覧から消えることを確認する
-6. 「CSVダウンロード」を押し、`attendance.csv` が取得できることを確認する
-7. 品質確認として以下を実行する
+画面では以下を確認してください。
 
-   ```powershell
-   npm run lint
-   npm run build
-   ```
-
-## 実装時に確認したこと
-
-- `npm run lint` が成功すること
-- `npm run build` が成功すること
-- Prisma schema が PostgreSQL provider として valid であること
+1. 年月を変えて表示できる
+2. 平日の入力欄が1か月分表示される
+3. 土日の表示/非表示を切り替えられる
+4. 土日に入力したあと、土日非表示に戻しても入力済みの土日は残る
+5. 日別に行追加できる
+6. 月次保存できる
+7. 保存後に再表示して入力内容が残る
+8. CSVをダウンロードできる
 
 ## 残課題
 
-- 入力者認証とユーザー別データ管理
-- 出退勤時刻と休憩時間から実働時間を計算する機能
-- 月次集計、検索、絞り込み
-- 削除前の確認ダイアログ
-- CSV の文字コードや項目形式の業務要件への調整
-- 本番運用向けバックアップ、監査ログの検討
+- 社員・入力者の管理
+- ログイン
+- 承認フロー
+- 月次集計
+- 業務用CSV形式への調整
+- 稼働時間の丸め・休憩・深夜跨ぎの扱い
+- 監査ログ

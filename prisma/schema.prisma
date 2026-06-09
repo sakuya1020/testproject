@@ -18,3 +18,21 @@ model Attendance {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model WorkEntry {
+  id           Int      @id @default(autoincrement())
+  workDate     DateTime
+  rowIndex     Int
+  orderCode    String   @db.VarChar(9)
+  isTravel     Boolean  @default(false)
+  process      String   @db.VarChar(2)
+  detail       String   @db.VarChar(2)
+  orderName    String
+  startTime    String   @db.VarChar(5)
+  endTime      String   @db.VarChar(5)
+  workContent  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([workDate])
+}
