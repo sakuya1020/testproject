@@ -31,7 +31,7 @@ type WeekGroup = {
   days: MonthDay[];
 };
 
-const openWeeksStorageKey = "attendance-open-week-indexes";
+const openWeeksStorageKeyPrefix = "attendance-open-week-indexes";
 
 export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(month);
@@ -42,6 +42,7 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
   const [isPending, startTransition] = useTransition();
   const monthDays = useMemo(() => daysInMonth(month), [month]);
   const weekGroups = useMemo(() => groupDaysByWeek(monthDays), [monthDays]);
+  const openWeeksStorageKey = `${openWeeksStorageKeyPrefix}:${month}`;
 
   useEffect(() => {
     const stored = window.localStorage.getItem(openWeeksStorageKey);
@@ -57,7 +58,7 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
     } catch {
       setOpenWeeks(new Set());
     }
-  }, []);
+  }, [openWeeksStorageKey]);
 
   function updateEntry(index: number, patch: Partial<WorkEntryInput>) {
     setEntries((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...patch } : entry)));
