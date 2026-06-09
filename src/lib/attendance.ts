@@ -111,7 +111,10 @@ export function calculateWorkHours(startTime: string, endTime: string): string {
     return "";
   }
 
-  return ((end - start) / 60).toFixed(2);
+  const duration = end - start;
+  const hours = Math.floor(duration / 60);
+  const minutes = duration % 60;
+  return `${hours}時間${String(minutes).padStart(2, "0")}分`;
 }
 
 export function workEntriesToCsv(entries: WorkEntry[]): string {

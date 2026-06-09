@@ -156,6 +156,53 @@ button:disabled {
   gap: 12px;
 }
 
+.weekPanel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.weekHeader {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 0;
+  background: var(--panel);
+  color: var(--text);
+  border-bottom: 1px solid transparent;
+  padding: 13px 14px;
+  text-align: left;
+}
+
+.weekHeader:hover {
+  background: var(--panel-soft);
+}
+
+.weekHeader[aria-expanded="true"] {
+  border-bottom-color: var(--line);
+}
+
+.weekHeader span:last-child {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.weekBody {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  background: #fbfcfe;
+}
+
+.emptyWeek {
+  padding: 12px;
+  color: var(--muted);
+}
+
 .dayPanel {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -196,9 +243,9 @@ button:disabled {
 .entryHead,
 .entryRow {
   display: grid;
-  grid-template-columns: 100px 56px 70px 70px minmax(180px, 1fr) 96px 96px 72px minmax(260px, 1.5fr);
+  grid-template-columns: 150px 56px 70px 70px minmax(180px, 1fr) 96px 96px 92px minmax(260px, 1.5fr);
   gap: 8px;
-  min-width: 1120px;
+  min-width: 1200px;
   align-items: center;
   padding: 8px 12px;
 }
