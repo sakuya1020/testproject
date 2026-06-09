@@ -36,3 +36,25 @@ model WorkEntry {
 
   @@index([workDate])
 }
+
+model UserSetting {
+  id        Int      @id @default(1)
+  opNo      String   @db.VarChar(3)
+  name      String
+  updatedAt DateTime @updatedAt
+}
+
+model OrderPreset {
+  id           Int      @id @default(autoincrement())
+  displayOrder Int
+  orderNo      String   @db.VarChar(9)
+  orderName    String
+  time1Start   String   @db.VarChar(5)
+  time1End     String   @db.VarChar(5)
+  time2Start   String   @db.VarChar(5)
+  time2End     String   @db.VarChar(5)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([displayOrder])
+}

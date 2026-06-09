@@ -12,9 +12,13 @@ import {
 type Props = {
   month: string;
   initialEntries: WorkEntryView[];
+  orderOptions: Array<{
+    orderNo: string;
+    orderName: string;
+  }>;
 };
 
-export function MonthAttendanceForm({ month, initialEntries }: Props) {
+export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(month);
   const [showWeekends, setShowWeekends] = useState(false);
   const [entries, setEntries] = useState<WorkEntryInput[]>(() => createInitialEntries(month, initialEntries));
@@ -26,18 +30,25 @@ export function MonthAttendanceForm({ month, initialEntries }: Props) {
     setEntries((current) => current.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...patch } : entry)));
   }
 
+  function updateOrder(index: number, value: string) {
+    const orderCode = toHalfWidth(value).slice(0, 9);
+    const option = orderOptions.find((order) => order.orderNo === orderCode);
+    updateEntry(index, {
+      orderCode,
+      ...(option ? { orderName: option.orderName } : {})
+    });
+  }
+
   function addRow(date: string) {
     setEntries((current) => {
       const dayRows = current.filter((entry) => entry.date === date);
-      const nextRowIndex = dayRows.length;
-      return [...current, createEmptyEntry(date, nextRowIndex)];
+      return [...current, createEmptyEntry(date, dayRows.length)];
     });
   }
 
   function submitEntries() {
     startTransition(async () => {
-      const saveResult = await saveMonthlyEntries(month, entries);
-      setResult(saveResult);
+      setResult(await saveMonthlyEntries(month, entries));
     });
   }
 
@@ -65,6 +76,14 @@ export function MonthAttendanceForm({ month, initialEntries }: Props) {
           CSV
         </a>
       </section>
+
+      <datalist id="order-options">
+        {orderOptions.map((order) => (
+          <option value={order.orderNo} key={order.orderNo}>
+            {order.orderName}
+          </option>
+        ))}
+      </datalist>
 
       {result ? <p className={result.ok ? "notice success" : "notice error"}>{result.message}</p> : null}
 
@@ -111,10 +130,11 @@ export function MonthAttendanceForm({ month, initialEntries }: Props) {
                   <div className="entryRow" key={`${entry.date}-${entry.rowIndex}`}>
                     <input
                       aria-label={`${day.date} オーダー`}
+                      list="order-options"
                       maxLength={9}
                       pattern="[\x20-\x7E]*"
                       value={entry.orderCode}
-                      onChange={(event) => updateEntry(index, { orderCode: toHalfWidth(event.target.value).slice(0, 9) })}
+                      onChange={(event) => updateOrder(index, event.target.value)}
                     />
                     <label className="checkboxCell">
                       <input
