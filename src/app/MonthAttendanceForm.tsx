@@ -119,8 +119,8 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
         <button type="button" onClick={submitEntries} disabled={isPending}>
           {isPending ? "保存中" : "月次保存"}
         </button>
-        <a className="downloadButton" href={`/api/attendance/csv?month=${month}`}>
-          CSV
+        <a className="downloadButton" href={`/api/attendance/excel?month=${month}`}>
+          Excel
         </a>
       </section>
 
