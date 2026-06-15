@@ -331,7 +331,7 @@ output {
 }
 
 .settingsForm {
-  grid-template-columns: 160px minmax(220px, 1fr);
+  grid-template-columns: 160px minmax(220px, 1fr) repeat(2, minmax(140px, 180px));
 }
 
 .presetTable {

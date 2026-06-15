@@ -38,10 +38,12 @@ model WorkEntry {
 }
 
 model UserSetting {
-  id        Int      @id @default(1)
-  opNo      String   @db.VarChar(3)
-  name      String
-  updatedAt DateTime @updatedAt
+  id            Int      @id @default(1)
+  opNo          String   @db.VarChar(3)
+  name          String
+  workStartTime String   @default("09:00") @db.VarChar(5)
+  workEndTime   String   @default("18:00") @db.VarChar(5)
+  updatedAt     DateTime @updatedAt
 }
 
 model OrderPreset {

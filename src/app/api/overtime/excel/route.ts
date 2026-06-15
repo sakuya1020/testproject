@@ -26,7 +26,9 @@ export async function GET(request: Request): Promise<Response> {
 
   const workbookBuffer = await buildOvertimeReportExcel(records, range.value, {
     department: "",
-    name: settings?.name ?? ""
+    name: settings?.name ?? "",
+    workStartTime: settings?.workStartTime ?? "09:00",
+    workEndTime: settings?.workEndTime ?? "18:00"
   });
   const body = new ArrayBuffer(workbookBuffer.byteLength);
   new Uint8Array(body).set(workbookBuffer);

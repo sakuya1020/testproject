@@ -71,12 +71,16 @@ export async function saveSettings(formData: FormData): Promise<ActionResult> {
         where: { id: 1 },
         update: {
           opNo: settings.opNo,
-          name: settings.name
+          name: settings.name,
+          workStartTime: settings.workStartTime,
+          workEndTime: settings.workEndTime
         },
         create: {
           id: 1,
           opNo: settings.opNo,
-          name: settings.name
+          name: settings.name,
+          workStartTime: settings.workStartTime,
+          workEndTime: settings.workEndTime
         }
       }),
       prisma.orderPreset.deleteMany()

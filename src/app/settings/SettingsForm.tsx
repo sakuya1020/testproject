@@ -58,6 +58,14 @@ export function SettingsForm({ settings, currentMonth }: Props) {
             氏名
             <input name="name" defaultValue={settings.name} />
           </label>
+          <label>
+            作業開始時間
+            <input name="workStartTime" type="time" defaultValue={settings.workStartTime} />
+          </label>
+          <label>
+            作業終了時間
+            <input name="workEndTime" type="time" defaultValue={settings.workEndTime} />
+          </label>
 
           <div className="presetTable">
             <div className="presetHead">

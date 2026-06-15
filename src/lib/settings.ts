@@ -14,6 +14,8 @@ export type OrderPresetInput = {
 export type SettingsView = {
   opNo: string;
   name: string;
+  workStartTime: string;
+  workEndTime: string;
   orders: OrderPresetInput[];
 };
 
@@ -23,6 +25,8 @@ export function toSettingsView(setting: UserSetting | null, presets: OrderPreset
   return {
     opNo: setting?.opNo ?? "",
     name: setting?.name ?? "",
+    workStartTime: setting?.workStartTime ?? "09:00",
+    workEndTime: setting?.workEndTime ?? "18:00",
     orders: Array.from({ length: 10 }, (_, index) => {
       const preset = presets.find((item) => item.displayOrder === index);
       return {
@@ -41,9 +45,19 @@ export function toSettingsView(setting: UserSetting | null, presets: OrderPreset
 export function parseSettingsForm(formData: FormData): SettingsView {
   const opNo = getString(formData, "opNo");
   const name = getString(formData, "name");
+  const workStartTime = getString(formData, "workStartTime") || "09:00";
+  const workEndTime = getString(formData, "workEndTime") || "18:00";
 
   if (!/^\d{0,3}$/.test(opNo)) {
     throw new Error("OP-NOは数値3桁以内で入力してください。");
+  }
+
+  if (!timePattern.test(workStartTime) || !timePattern.test(workEndTime)) {
+    throw new Error("作業開始時間と作業終了時間は HH:mm 形式で入力してください。");
+  }
+
+  if (workStartTime >= workEndTime) {
+    throw new Error("作業終了時間は作業開始時間より後にしてください。");
   }
 
   const orders = Array.from({ length: 10 }, (_, index) => ({
@@ -60,7 +74,7 @@ export function parseSettingsForm(formData: FormData): SettingsView {
     validatePreset(order);
   }
 
-  return { opNo, name, orders };
+  return { opNo, name, workStartTime, workEndTime, orders };
 }
 
 export function buildInitializedEntries(params: {

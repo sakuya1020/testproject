@@ -9,14 +9,21 @@ import { isJapaneseHoliday } from "@/lib/settings";
 type UserInfo = {
   department: string;
   name: string;
+  workStartTime: string;
+  workEndTime: string;
 };
 
 type DailyOvertime = {
-  isHoliday: boolean;
+  isHolidayWork: boolean;
   startTime: string;
   endTime: string;
   hours: number;
   workContent: string;
+};
+
+type OvertimeSegment = {
+  start: number;
+  end: number;
 };
 
 const templatePath = path.join(process.cwd(), "templates", "overtime-report-template.xlsx");
@@ -35,7 +42,8 @@ export async function buildOvertimeReportExcel(entries: WorkEntry[], month: stri
   }
 
   const { year, monthIndex } = parseMonthValue(month);
-  const summaries = summarizeEntries(entries);
+  const monthDays = daysInMonth(month);
+  const summaries = summarizeEntries(entries, user.workStartTime, user.workEndTime);
 
   worksheet.getCell("C2").value = toReiwaYear(year);
   worksheet.getCell("E2").value = monthIndex + 1;
@@ -49,8 +57,8 @@ export async function buildOvertimeReportExcel(entries: WorkEntry[], month: stri
     const rowNumber = firstDayRow + day - 1;
     const row = worksheet.getRow(rowNumber);
 
-    if (day > daysInMonth(month).length) {
-      clearRow(row, 2, 17);
+    if (day > monthDays.length) {
+      clearRow(row, 1, 17);
       row.commit();
       continue;
     }
@@ -58,13 +66,13 @@ export async function buildOvertimeReportExcel(entries: WorkEntry[], month: stri
     const date = new Date(year, monthIndex, day);
     const dateKey = formatDateKey(date);
     const summary = summaries.get(dateKey);
-    const isHoliday = summary?.isHoliday ?? isWeekendOrHoliday(dateKey);
 
-    row.getCell(2).value = day;
+    row.getCell(1).value = day;
+    row.getCell(2).value = "";
     row.getCell(3).value = "(";
     row.getCell(4).value = weekdays[date.getDay()];
     row.getCell(5).value = ")";
-    row.getCell(6).value = isHoliday ? "○" : "";
+    row.getCell(6).value = summary?.isHolidayWork ? "◯" : "";
     row.getCell(7).value = "";
     row.getCell(9).value = summary?.startTime ?? "";
     row.getCell(10).value = summary?.endTime ?? "";
@@ -80,8 +88,10 @@ export async function buildOvertimeReportExcel(entries: WorkEntry[], month: stri
   return Buffer.from(buffer);
 }
 
-function summarizeEntries(entries: WorkEntry[]): Map<string, DailyOvertime> {
+function summarizeEntries(entries: WorkEntry[], workStartTime: string, workEndTime: string): Map<string, DailyOvertime> {
   const summaries = new Map<string, DailyOvertime>();
+  const workStart = toMinutes(workStartTime) ?? toMinutes("09:00")!;
+  const workEnd = toMinutes(workEndTime) ?? toMinutes("18:00")!;
 
   const grouped = new Map<string, WorkEntry[]>();
   for (const entry of entries) {
@@ -90,26 +100,35 @@ function summarizeEntries(entries: WorkEntry[]): Map<string, DailyOvertime> {
   }
 
   for (const [dateKey, dayEntries] of grouped) {
-    const timedEntries = dayEntries
-      .filter((entry) => entry.startTime && entry.endTime)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime));
+    const isHolidayWork = isWeekendOrHoliday(dateKey);
+    const overtimeRows = dayEntries
+      .flatMap((entry) => {
+        const start = toMinutes(entry.startTime);
+        const end = toMinutes(entry.endTime);
+        if (start === null || end === null || end <= start) {
+          return [];
+        }
 
-    if (timedEntries.length === 0) {
+        return getOvertimeSegments(start, end, workStart, workEnd, isHolidayWork).map((segment) => ({
+          entry,
+          segment
+        }));
+      })
+      .sort((a, b) => a.segment.start - b.segment.start || a.segment.end - b.segment.end);
+
+    if (overtimeRows.length === 0) {
       continue;
     }
 
-    const first = timedEntries[0];
-    const last = timedEntries.reduce((latest, entry) => (entry.endTime > latest.endTime ? entry : latest), timedEntries[0]);
-    const hours = timedEntries.reduce((sum, entry) => sum + calculateDecimalHours(entry.startTime, entry.endTime), 0);
-    const workContent = timedEntries
-      .map((entry) => entry.workContent || entry.orderName)
-      .filter(Boolean)
-      .join(" / ");
+    const first = overtimeRows[0].segment;
+    const last = overtimeRows.reduce((latest, row) => (row.segment.end > latest.end ? row.segment : latest), first);
+    const hours = overtimeRows.reduce((sum, row) => sum + (row.segment.end - row.segment.start) / 60, 0);
+    const workContent = [...new Set(overtimeRows.map((row) => row.entry.workContent || row.entry.orderName).filter(Boolean))].join(" / ");
 
     summaries.set(dateKey, {
-      isHoliday: isWeekendOrHoliday(dateKey),
-      startTime: first.startTime,
-      endTime: last.endTime,
+      isHolidayWork,
+      startTime: formatTime(first.start),
+      endTime: formatTime(last.end),
       hours: roundHours(hours),
       workContent
     });
@@ -118,13 +137,26 @@ function summarizeEntries(entries: WorkEntry[]): Map<string, DailyOvertime> {
   return summaries;
 }
 
-function calculateDecimalHours(startTime: string, endTime: string): number {
-  const start = toMinutes(startTime);
-  const end = toMinutes(endTime);
-  if (start === null || end === null || end <= start) {
-    return 0;
+function getOvertimeSegments(
+  start: number,
+  end: number,
+  workStart: number,
+  workEnd: number,
+  isHolidayWork: boolean
+): OvertimeSegment[] {
+  if (isHolidayWork) {
+    return [{ start, end }];
   }
-  return (end - start) / 60;
+
+  const segments: OvertimeSegment[] = [];
+  if (start < workStart) {
+    segments.push({ start, end: Math.min(end, workStart) });
+  }
+  if (end > workEnd) {
+    segments.push({ start: Math.max(start, workEnd), end });
+  }
+
+  return segments.filter((segment) => segment.end > segment.start);
 }
 
 function toMinutes(time: string): number | null {
@@ -133,6 +165,12 @@ function toMinutes(time: string): number | null {
     return null;
   }
   return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
 function roundHours(value: number): number {
