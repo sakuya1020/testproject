@@ -135,6 +135,14 @@ button:disabled {
   background: #d6e2f2;
 }
 
+.secondaryDownloadButton {
+  background: var(--success);
+}
+
+.secondaryDownloadButton:hover {
+  background: #05603a;
+}
+
 .notice {
   border-radius: 8px;
   padding: 12px 14px;
