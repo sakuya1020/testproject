@@ -36,7 +36,7 @@ export async function GET(request: Request): Promise<Response> {
   return new Response(body, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="overtime-report-${range.value}.xlsx"`
+      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(`残業申告書_${range.value.replace("-", "")}.xlsx`)}`
     }
   });
 }

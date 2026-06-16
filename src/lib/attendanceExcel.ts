@@ -3,14 +3,12 @@ import "server-only";
 import type { WorkEntry } from "@prisma/client";
 import ExcelJS from "exceljs";
 import path from "node:path";
-import { calculateWorkHours, daysInMonth, formatDateKey, parseMonthValue } from "@/lib/attendance";
+import { calculateWorkHours, formatDateKey, parseMonthValue } from "@/lib/attendance";
 
 type UserInfo = {
   opNo: string;
   name: string;
 };
-
-type MonthDay = ReturnType<typeof daysInMonth>[number];
 
 const templatePath = path.join(process.cwd(), "templates", "attendance-template.xlsx");
 const weekSheetNames = ["1週目", "2週目", "3週目", "4週目", "5週目", "6週目"];
@@ -23,75 +21,51 @@ export async function buildAttendanceExcel(entries: WorkEntry[], month: string, 
   await workbook.xlsx.readFile(templatePath);
 
   const { year, monthIndex } = parseMonthValue(month);
-  const entriesByDate = new Map<string, WorkEntry[]>();
-  for (const entry of entries) {
-    const dateKey = formatDateKey(entry.workDate);
-    entriesByDate.set(dateKey, [...(entriesByDate.get(dateKey) ?? []), entry]);
+  const worksheet = workbook.getWorksheet(weekSheetNames[0]) ?? workbook.worksheets[0];
+  if (!worksheet) {
+    throw new Error("週次作業報告書テンプレートにシートが見つかりません。");
   }
 
-  const weeks = groupDaysByWeek(daysInMonth(month));
-  weekSheetNames.forEach((sheetName, index) => {
-    const worksheet = workbook.getWorksheet(sheetName);
-    if (!worksheet) {
-      return;
+  for (const sheetName of weekSheetNames.slice(1)) {
+    const extraSheet = workbook.getWorksheet(sheetName);
+    if (extraSheet) {
+      workbook.removeWorksheet(extraSheet.id);
     }
+  }
 
-    worksheet.getCell("B3").value = user.opNo;
-    worksheet.getCell("B4").value = user.name;
-    worksheet.getCell("D4").value = year;
-    worksheet.getCell("F4").value = monthIndex + 1;
-    clearDataRows(worksheet);
+  worksheet.name = "1ヶ月分";
+  worksheet.getCell("B3").value = user.opNo;
+  worksheet.getCell("B4").value = user.name;
+  worksheet.getCell("D4").value = year;
+  worksheet.getCell("F4").value = monthIndex + 1;
+  worksheet.getCell("H4").value = "";
+  worksheet.getCell("I4").value = "";
+  worksheet.getCell("F6").value = "オーダー名";
+  clearDataRows(worksheet);
 
-    const week = weeks[index];
-    if (!week) {
-      return;
-    }
-
-    const rows = week.flatMap((day) => entriesByDate.get(day.date) ?? []);
-    rows.forEach((entry, rowIndex) => {
-      const row = worksheet.getRow(dataStartRow + rowIndex);
-      const values = [
-        formatDateKey(entry.workDate),
-        entry.orderCode,
-        entry.isTravel ? "1" : "",
-        entry.process,
-        entry.detail,
-        user.name,
-        entry.startTime,
-        entry.endTime,
-        entry.workContent,
-        calculateWorkHours(entry.startTime, entry.endTime)
-      ];
-      copyRowStyle(worksheet, 6, dataStartRow + rowIndex);
-      values.forEach((value, columnIndex) => {
-        row.getCell(columnIndex + 1).value = value;
-      });
-      row.commit();
+  entries.forEach((entry, rowIndex) => {
+    const row = worksheet.getRow(dataStartRow + rowIndex);
+    const values = [
+      formatSlashDate(entry.workDate),
+      entry.orderCode,
+      entry.isTravel ? "1" : "",
+      entry.process,
+      entry.detail,
+      entry.orderName,
+      entry.startTime,
+      entry.endTime,
+      entry.workContent,
+      calculateWorkHours(entry.startTime, entry.endTime)
+    ];
+    copyRowStyle(worksheet, 6, dataStartRow + rowIndex);
+    values.forEach((value, columnIndex) => {
+      row.getCell(columnIndex + 1).value = value;
     });
+    row.commit();
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
-}
-
-function groupDaysByWeek(days: MonthDay[]): MonthDay[][] {
-  const groups: MonthDay[][] = [];
-  let current: MonthDay[] = [];
-
-  for (const day of days) {
-    const weekdayIndex = new Date(`${day.date}T00:00:00`).getDay();
-    if (current.length > 0 && weekdayIndex === 1) {
-      groups.push(current);
-      current = [];
-    }
-    current.push(day);
-  }
-
-  if (current.length > 0) {
-    groups.push(current);
-  }
-
-  return groups;
 }
 
 function clearDataRows(worksheet: ExcelJS.Worksheet) {
@@ -112,5 +86,10 @@ function copyRowStyle(worksheet: ExcelJS.Worksheet, sourceRowNumber: number, tar
     const sourceCell = sourceRow.getCell(columnNumber);
     const targetCell = targetRow.getCell(columnNumber);
     targetCell.style = { ...sourceCell.style };
+    targetCell.fill = { type: "pattern", pattern: "none" };
   }
+}
+
+function formatSlashDate(date: Date): string {
+  return formatDateKey(date).replaceAll("-", "/");
 }
