@@ -144,8 +144,8 @@ export function MonthAttendanceForm({ month, initialEntries, initialDayCodes, or
         <button type="button" onClick={submitEntries} disabled={isPending}>
           {isPending ? "保存中" : "月次保存"}
         </button>
-        <a className="downloadButton" href={`/api/attendance/excel?month=${month}`}>
-          Excel
+        <a className="downloadButton secondaryDownloadButton" href={`/api/attendance/excel?month=${month}`}>
+          週次作業報告書
         </a>
         <a className="downloadButton secondaryDownloadButton" href={`/api/attendance/timesheet?month=${month}`}>
           勤怠表
