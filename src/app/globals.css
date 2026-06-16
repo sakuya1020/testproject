@@ -344,8 +344,8 @@ output {
 .presetHead,
 .presetRow {
   display: grid;
-  grid-template-columns: 54px 120px minmax(220px, 1fr) 110px 110px 110px 110px;
-  min-width: 840px;
+  grid-template-columns: 54px 120px minmax(220px, 1fr) 120px 120px;
+  min-width: 640px;
   gap: 8px;
   align-items: center;
   padding: 8px 10px;

@@ -72,10 +72,8 @@ export function SettingsForm({ settings, currentMonth }: Props) {
               <span>No.</span>
               <span>オーダーNo</span>
               <span>オーダー名</span>
-              <span>時間1 開始</span>
-              <span>時間1 終了</span>
-              <span>時間2 開始</span>
-              <span>時間2 終了</span>
+              <span>開始時間</span>
+              <span>終了時間</span>
             </div>
             {settings.orders.map((order, index) => (
               <div className="presetRow" key={index}>
@@ -87,10 +85,8 @@ export function SettingsForm({ settings, currentMonth }: Props) {
                   defaultValue={order.orderNo}
                 />
                 <input name={`orderName-${index}`} defaultValue={order.orderName} />
-                <input name={`time1Start-${index}`} type="time" defaultValue={order.time1Start} />
-                <input name={`time1End-${index}`} type="time" defaultValue={order.time1End} />
-                <input name={`time2Start-${index}`} type="time" defaultValue={order.time2Start} />
-                <input name={`time2End-${index}`} type="time" defaultValue={order.time2End} />
+                <input name={`startTime-${index}`} type="time" defaultValue={order.time1Start} />
+                <input name={`endTime-${index}`} type="time" defaultValue={order.time1End} />
               </div>
             ))}
           </div>

@@ -122,6 +122,9 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
         <a className="downloadButton" href={`/api/attendance/excel?month=${month}`}>
           Excel
         </a>
+        <a className="downloadButton secondaryDownloadButton" href={`/api/attendance/timesheet?month=${month}`}>
+          勤怠表
+        </a>
         <a className="downloadButton secondaryDownloadButton" href={`/api/overtime/excel?month=${month}`}>
           残業申告書
         </a>

@@ -60,15 +60,20 @@ export function parseSettingsForm(formData: FormData): SettingsView {
     throw new Error("作業終了時間は作業開始時間より後にしてください。");
   }
 
-  const orders = Array.from({ length: 10 }, (_, index) => ({
-    displayOrder: index,
-    orderNo: getString(formData, `orderNo-${index}`),
-    orderName: getString(formData, `orderName-${index}`),
-    time1Start: getString(formData, `time1Start-${index}`),
-    time1End: getString(formData, `time1End-${index}`),
-    time2Start: getString(formData, `time2Start-${index}`),
-    time2End: getString(formData, `time2End-${index}`)
-  })).filter(hasPresetInput);
+  const orders = Array.from({ length: 10 }, (_, index) => {
+    const startTime = getString(formData, `startTime-${index}`);
+    const endTime = getString(formData, `endTime-${index}`);
+
+    return {
+      displayOrder: index,
+      orderNo: getString(formData, `orderNo-${index}`),
+      orderName: getString(formData, `orderName-${index}`),
+      time1Start: startTime,
+      time1End: endTime,
+      time2Start: startTime,
+      time2End: endTime
+    };
+  }).filter(hasPresetInput);
 
   for (const order of orders) {
     validatePreset(order);
@@ -97,7 +102,7 @@ export function buildInitializedEntries(params: {
     .filter((day) => !day.isWeekend && !isJapaneseHoliday(day.date))
     .flatMap((day) => [
       createInitializedEntry(day.date, 0, params.preset, process, detail, params.preset.time1Start, params.preset.time1End),
-      createInitializedEntry(day.date, 1, params.preset, process, detail, params.preset.time2Start, params.preset.time2End)
+      createInitializedEntry(day.date, 1, params.preset, process, detail, params.preset.time1Start, params.preset.time1End)
     ]);
 }
 
@@ -136,7 +141,7 @@ function validatePreset(order: OrderPresetInput): void {
     throw new Error("オーダーNoは半角9文字以内で入力してください。");
   }
 
-  for (const value of [order.time1Start, order.time1End, order.time2Start, order.time2End]) {
+  for (const value of [order.time1Start, order.time1End]) {
     if (value && !timePattern.test(value)) {
       throw new Error("時間は HH:mm 形式で入力してください。");
     }
@@ -148,9 +153,7 @@ function hasPresetInput(order: OrderPresetInput): boolean {
     order.orderNo ||
       order.orderName ||
       order.time1Start ||
-      order.time1End ||
-      order.time2Start ||
-      order.time2End
+      order.time1End
   );
 }
 
