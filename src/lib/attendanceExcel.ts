@@ -44,6 +44,8 @@ export async function buildAttendanceExcel(entries: WorkEntry[], month: string, 
     }
 
     worksheet.name = `${index + 1}週目`;
+    worksheet.getCell("E1").value = null;
+    worksheet.getCell("F1").value = "週間作業報告書";
     worksheet.getCell("B3").value = user.opNo;
     worksheet.getCell("B4").value = user.name;
     worksheet.getCell("D4").value = year;
