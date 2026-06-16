@@ -8,14 +8,26 @@ import {
   type WorkEntryInput,
   type WorkEntryView
 } from "@/lib/attendance";
+import {
+  attendanceCodeOptions,
+  nonEditableAttendanceCodes,
+  type AttendanceCode,
+  type DailyAttendanceCodeInput
+} from "@/lib/attendanceCodes";
 
 type Props = {
   month: string;
   initialEntries: WorkEntryView[];
+  initialDayCodes: InitialDayCode[];
   orderOptions: Array<{
     orderNo: string;
     orderName: string;
   }>;
+};
+
+export type InitialDayCode = {
+  date: string;
+  code: AttendanceCode;
 };
 
 type MonthDay = {
@@ -33,11 +45,12 @@ type WeekGroup = {
 
 const openWeeksStorageKeyPrefix = "attendance-open-week-indexes";
 
-export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Props) {
+export function MonthAttendanceForm({ month, initialEntries, initialDayCodes, orderOptions }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(month);
   const [showWeekends, setShowWeekends] = useState(false);
   const [openWeeks, setOpenWeeks] = useState<Set<number>>(new Set());
   const [entries, setEntries] = useState<WorkEntryInput[]>(() => createInitialEntries(month, initialEntries));
+  const [dayCodes, setDayCodes] = useState<Record<string, AttendanceCode>>(() => createInitialDayCodes(initialDayCodes));
   const [result, setResult] = useState<SaveMonthlyEntriesResult | null>(null);
   const [isPending, startTransition] = useTransition();
   const monthDays = useMemo(() => daysInMonth(month), [month]);
@@ -80,6 +93,17 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
     });
   }
 
+  function updateDayCode(date: string, code: AttendanceCode) {
+    setDayCodes((current) => ({ ...current, [date]: code }));
+    if (nonEditableAttendanceCodes.has(code)) {
+      setEntries((current) =>
+        current
+          .filter((entry) => entry.date !== date)
+          .concat(Array.from({ length: 3 }, (_, rowIndex) => createEmptyEntry(date, rowIndex)))
+      );
+    }
+  }
+
   function toggleWeek(index: number) {
     setOpenWeeks((current) => {
       const next = new Set(current);
@@ -95,7 +119,8 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
 
   function submitEntries() {
     startTransition(async () => {
-      setResult(await saveMonthlyEntries(month, entries));
+      const editableEntries = entries.filter((entry) => !nonEditableAttendanceCodes.has(getDayCode(entry.date, dayCodes)));
+      setResult(await saveMonthlyEntries(month, editableEntries, toDayCodeInputs(dayCodes, monthDays)));
     });
   }
 
@@ -143,8 +168,8 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
       <section className="monthGrid" aria-label="週別入力欄">
         {weekGroups.map((week) => {
           const isOpen = openWeeks.has(week.index);
-          const visibleDays = week.days.filter((day) => shouldShowDay(day, entries, showWeekends));
-          const inputCount = countWeekInputs(week.days, entries);
+          const visibleDays = week.days.filter((day) => shouldShowDay(day, entries, dayCodes, showWeekends));
+          const inputCount = countWeekInputs(week.days, entries, dayCodes);
 
           return (
             <section className="weekPanel" key={week.index}>
@@ -162,6 +187,8 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                 <div className="weekBody">
                   {visibleDays.length === 0 ? <p className="emptyWeek">表示対象の日がありません。</p> : null}
                   {visibleDays.map((day) => {
+                    const dayCode = dayCodes[day.date] ?? (day.isWeekend ? "99" : "00");
+                    const isDayReadOnly = nonEditableAttendanceCodes.has(dayCode);
                     const dayEntries = entries
                       .map((entry, index) => ({ entry, index }))
                       .filter(({ entry }) => entry.date === day.date)
@@ -176,9 +203,30 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                             </h2>
                             <p>{day.date}</p>
                           </div>
-                          <button type="button" className="secondaryButton" onClick={() => addRow(day.date)}>
-                            行追加
-                          </button>
+                          <div className="dayActions">
+                            <label className="dayCodeSelector">
+                              コード
+                              <select
+                                aria-label={`${day.date} 勤怠コード`}
+                                value={dayCode}
+                                onChange={(event) => updateDayCode(day.date, event.target.value as AttendanceCode)}
+                              >
+                                {attendanceCodeOptions.map((option) => (
+                                  <option value={option.code} key={option.code}>
+                                    {option.code}：{option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="secondaryButton"
+                              onClick={() => addRow(day.date)}
+                              disabled={isDayReadOnly}
+                            >
+                              行追加
+                            </button>
+                          </div>
                         </header>
 
                         <div className="entryTable">
@@ -202,6 +250,7 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                                 pattern="[\x20-\x7E]*"
                                 value={entry.orderCode}
                                 onChange={(event) => updateOrder(index, event.target.value)}
+                                disabled={isDayReadOnly}
                               />
                               <label className="checkboxCell">
                                 <input
@@ -209,6 +258,7 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                                   type="checkbox"
                                   checked={entry.isTravel}
                                   onChange={(event) => updateEntry(index, { isTravel: event.target.checked })}
+                                  disabled={isDayReadOnly}
                                 />
                               </label>
                               <input
@@ -220,6 +270,7 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                                     process: event.target.value.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase()
                                   })
                                 }
+                                disabled={isDayReadOnly}
                               />
                               <input
                                 aria-label={`${day.date} 詳細`}
@@ -227,29 +278,34 @@ export function MonthAttendanceForm({ month, initialEntries, orderOptions }: Pro
                                 maxLength={2}
                                 value={entry.detail}
                                 onChange={(event) => updateEntry(index, { detail: event.target.value.replace(/\D/g, "").slice(0, 2) })}
+                                disabled={isDayReadOnly}
                               />
                               <input
                                 aria-label={`${day.date} オーダー名`}
                                 value={entry.orderName}
                                 onChange={(event) => updateEntry(index, { orderName: event.target.value })}
+                                disabled={isDayReadOnly}
                               />
                               <input
                                 aria-label={`${day.date} 勤務開始時間`}
                                 type="time"
                                 value={entry.startTime}
                                 onChange={(event) => updateEntry(index, { startTime: event.target.value })}
+                                disabled={isDayReadOnly}
                               />
                               <input
                                 aria-label={`${day.date} 勤務終了時間`}
                                 type="time"
                                 value={entry.endTime}
                                 onChange={(event) => updateEntry(index, { endTime: event.target.value })}
+                                disabled={isDayReadOnly}
                               />
                               <output>{calculateWorkHours(entry.startTime, entry.endTime)}</output>
                               <input
                                 aria-label={`${day.date} 作業内容`}
                                 value={entry.workContent}
                                 onChange={(event) => updateEntry(index, { workContent: event.target.value })}
+                                disabled={isDayReadOnly}
                               />
                             </div>
                           ))}
@@ -297,13 +353,25 @@ function createWeekGroup(index: number, days: MonthDay[]): WeekGroup {
   };
 }
 
-function shouldShowDay(day: MonthDay, entries: WorkEntryInput[], showWeekends: boolean): boolean {
-  return !day.isWeekend || showWeekends || entries.some((entry) => entry.date === day.date && hasInputValue(entry));
+function shouldShowDay(
+  day: MonthDay,
+  entries: WorkEntryInput[],
+  dayCodes: Record<string, AttendanceCode>,
+  showWeekends: boolean
+): boolean {
+  return (
+    !day.isWeekend ||
+    showWeekends ||
+    getDayCode(day.date, dayCodes) !== "99" ||
+    entries.some((entry) => entry.date === day.date && hasInputValue(entry))
+  );
 }
 
-function countWeekInputs(days: MonthDay[], entries: WorkEntryInput[]): number {
+function countWeekInputs(days: MonthDay[], entries: WorkEntryInput[], dayCodes: Record<string, AttendanceCode>): number {
   const dates = new Set(days.map((day) => day.date));
-  return entries.filter((entry) => dates.has(entry.date) && hasInputValue(entry)).length;
+  const rowCount = entries.filter((entry) => dates.has(entry.date) && hasInputValue(entry)).length;
+  const codeCount = days.filter((day) => getDayCode(day.date, dayCodes) !== (day.isWeekend ? "99" : "00")).length;
+  return rowCount + codeCount;
 }
 
 function createInitialEntries(month: string, initialEntries: WorkEntryView[]): WorkEntryInput[] {
@@ -332,6 +400,24 @@ function createEmptyEntry(date: string, rowIndex: number): WorkEntryInput {
     endTime: "",
     workContent: ""
   };
+}
+
+function createInitialDayCodes(initialDayCodes: InitialDayCode[]): Record<string, AttendanceCode> {
+  return Object.fromEntries(initialDayCodes.map((dayCode) => [dayCode.date, dayCode.code]));
+}
+
+function getDayCode(date: string, dayCodes: Record<string, AttendanceCode>): AttendanceCode {
+  return dayCodes[date] ?? "00";
+}
+
+function toDayCodeInputs(
+  dayCodes: Record<string, AttendanceCode>,
+  days: MonthDay[]
+): DailyAttendanceCodeInput[] {
+  return days.map((day) => ({
+    date: day.date,
+    code: getDayCode(day.date, dayCodes)
+  }));
 }
 
 function hasInputValue(entry: WorkEntryInput): boolean {

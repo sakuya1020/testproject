@@ -244,6 +244,26 @@ button:disabled {
   font-size: 0.85rem;
 }
 
+.dayActions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dayCodeSelector {
+  display: grid;
+  gap: 5px;
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.dayCodeSelector select {
+  min-width: 130px;
+  padding-block: 7px;
+}
+
 .entryTable {
   overflow-x: auto;
 }

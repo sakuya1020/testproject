@@ -37,6 +37,16 @@ model WorkEntry {
   @@index([workDate])
 }
 
+model DailyAttendanceCode {
+  id        Int      @id @default(autoincrement())
+  workDate  DateTime @unique
+  code      String   @db.VarChar(2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workDate])
+}
+
 model UserSetting {
   id            Int      @id @default(1)
   opNo          String   @db.VarChar(3)

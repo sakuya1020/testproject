@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 import { monthRange, normalizeEntries, type WorkEntryInput } from "@/lib/attendance";
+import { isAttendanceCode, type DailyAttendanceCodeInput } from "@/lib/attendanceCodes";
 import { prisma } from "@/lib/prisma";
 import { buildInitializedEntries, parseSettingsForm } from "@/lib/settings";
 
@@ -18,13 +19,23 @@ export type ActionResult = {
 
 export async function saveMonthlyEntries(
   month: string,
-  entries: WorkEntryInput[]
+  entries: WorkEntryInput[],
+  dayCodes: DailyAttendanceCodeInput[]
 ): Promise<SaveMonthlyEntriesResult> {
   try {
     const range = monthRange(month);
     const normalized = normalizeEntries(entries);
+    const normalizedDayCodes = normalizeDayCodes(dayCodes, range);
     const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.workEntry.deleteMany({
+        where: {
+          workDate: {
+            gte: range.start,
+            lt: range.end
+          }
+        }
+      }),
+      prisma.dailyAttendanceCode.deleteMany({
         where: {
           workDate: {
             gte: range.start,
@@ -47,6 +58,15 @@ export async function saveMonthlyEntries(
           startTime: entry.startTime,
           endTime: entry.endTime,
           workContent: entry.workContent
+        }))
+      }));
+    }
+
+    if (normalizedDayCodes.length > 0) {
+      operations.push(prisma.dailyAttendanceCode.createMany({
+        data: normalizedDayCodes.map((dayCode) => ({
+          workDate: new Date(`${dayCode.date}T00:00:00`),
+          code: dayCode.code
         }))
       }));
     }
@@ -186,4 +206,26 @@ export async function initializeMonthlyEntries(formData: FormData): Promise<Acti
 function getFormString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeDayCodes(
+  dayCodes: DailyAttendanceCodeInput[],
+  range: ReturnType<typeof monthRange>
+): DailyAttendanceCodeInput[] {
+  const normalized = new Map<string, DailyAttendanceCodeInput>();
+
+  for (const dayCode of dayCodes) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dayCode.date) || !isAttendanceCode(dayCode.code)) {
+      throw new Error("勤怠コードが不正です。");
+    }
+
+    const workDate = new Date(`${dayCode.date}T00:00:00`);
+    if (workDate < range.start || workDate >= range.end) {
+      continue;
+    }
+
+    normalized.set(dayCode.date, dayCode);
+  }
+
+  return [...normalized.values()].sort((a, b) => a.date.localeCompare(b.date));
 }

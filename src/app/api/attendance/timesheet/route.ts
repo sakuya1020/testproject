@@ -9,7 +9,7 @@ export async function GET(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const month = url.searchParams.get("month") ?? getMonthValue();
   const range = monthRange(month);
-  const [records, settings] = await Promise.all([
+  const [records, dayCodes, settings] = await Promise.all([
     prisma.workEntry.findMany({
       where: {
         workDate: {
@@ -19,12 +19,20 @@ export async function GET(request: Request): Promise<Response> {
       },
       orderBy: [{ workDate: "asc" }, { rowIndex: "asc" }, { id: "asc" }]
     }),
+    prisma.dailyAttendanceCode.findMany({
+      where: {
+        workDate: {
+          gte: range.start,
+          lt: range.end
+        }
+      }
+    }),
     prisma.userSetting.findUnique({
       where: { id: 1 }
     })
   ]);
 
-  const workbookBuffer = await buildTimesheetExcel(records, range.value, {
+  const workbookBuffer = await buildTimesheetExcel(records, dayCodes, range.value, {
     opNo: settings?.opNo ?? "",
     name: settings?.name ?? "",
     workStartTime: settings?.workStartTime ?? "09:00"

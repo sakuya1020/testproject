@@ -4,6 +4,11 @@ import type { WorkEntry } from "@prisma/client";
 import ExcelJS from "exceljs";
 import path from "node:path";
 import { daysInMonth, formatDateKey, parseMonthValue } from "@/lib/attendance";
+import {
+  defaultAttendanceCode,
+  isAttendanceCode,
+  type AttendanceCode
+} from "@/lib/attendanceCodes";
 import { isJapaneseHoliday } from "@/lib/settings";
 
 type UserInfo = {
@@ -15,7 +20,11 @@ type UserInfo = {
 type DailySummary = {
   startTime: string;
   endTime: string;
-  isPaidLeave: boolean;
+};
+
+type StoredDayCode = {
+  workDate: Date;
+  code: string;
 };
 
 const templatePath = path.join(process.cwd(), "templates", "timesheet-template.xlsx");
@@ -24,8 +33,23 @@ const firstDayRow = 3;
 const maxDays = 31;
 const lastColumn = 13;
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+const attendanceItemLabels: Record<AttendanceCode, string> = {
+  "00": "出勤",
+  "04": "代休",
+  "11": "有給休暇",
+  "12": "午前有給",
+  "13": "午後有給",
+  "51": "夏季休暇",
+  "98": "休日出勤",
+  "99": "休日"
+};
 
-export async function buildTimesheetExcel(entries: WorkEntry[], month: string, user: UserInfo): Promise<Buffer> {
+export async function buildTimesheetExcel(
+  entries: WorkEntry[],
+  dayCodes: StoredDayCode[],
+  month: string,
+  user: UserInfo
+): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(templatePath);
 
@@ -37,6 +61,11 @@ export async function buildTimesheetExcel(entries: WorkEntry[], month: string, u
   const { year, monthIndex } = parseMonthValue(month);
   const monthDays = daysInMonth(month);
   const summaries = summarizeEntries(entries);
+  const dayCodeMap = new Map(
+    dayCodes
+      .filter((dayCode) => isAttendanceCode(dayCode.code))
+      .map((dayCode) => [formatDateKey(dayCode.workDate), dayCode.code as AttendanceCode])
+  );
 
   worksheet.getCell("B1").value = user.opNo;
   worksheet.getCell("E1").value = user.name;
@@ -59,13 +88,13 @@ export async function buildTimesheetExcel(entries: WorkEntry[], month: string, u
     const weekdayIndex = date.getDay();
     const isHoliday = weekdayIndex === 0 || weekdayIndex === 6 || isJapaneseHoliday(dateKey);
     const summary = summaries.get(dateKey);
-    const cd = summary?.isPaidLeave ? "11" : isHoliday ? "99" : "00";
+    const cd = dayCodeMap.get(dateKey) ?? defaultAttendanceCode(isHoliday);
 
     clearRow(row);
     row.getCell(1).value = day;
     row.getCell(2).value = weekdays[weekdayIndex];
     row.getCell(3).value = cd;
-    row.getCell(4).value = cd === "11" ? "有給休暇" : "";
+    row.getCell(4).value = attendanceItemLabels[cd];
     writeTimeCell(row.getCell(8), summary?.startTime ?? "");
     writeTimeCell(row.getCell(9), summary?.endTime ?? "");
     formatWeekdayCell(row.getCell(2), weekdayIndex);
@@ -92,14 +121,9 @@ function summarizeEntries(entries: WorkEntry[]): Map<string, DailySummary> {
       }))
       .filter((time): time is { start: number; end: number } => time.start !== null && time.end !== null && time.end > time.start);
 
-    const isPaidLeave = dayEntries.some((entry) =>
-      [entry.orderCode, entry.orderName, entry.workContent].some((value) => value.includes("有給"))
-    );
-
     summaries.set(dateKey, {
       startTime: times.length > 0 ? formatTime(Math.min(...times.map((time) => time.start))) : "",
-      endTime: times.length > 0 ? formatTime(Math.max(...times.map((time) => time.end))) : "",
-      isPaidLeave
+      endTime: times.length > 0 ? formatTime(Math.max(...times.map((time) => time.end))) : ""
     });
   }
 
