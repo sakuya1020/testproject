@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { monthRange, normalizeEntries, type WorkEntryInput } from "@/lib/attendance";
 import { isAttendanceCode, type DailyAttendanceCodeInput } from "@/lib/attendanceCodes";
-import { ensureInitialAdmin, hashPassword, requireAdmin, signIn, signOut } from "@/lib/auth";
+import { ensureInitialAdmin, hashPassword, requireAdmin, requireUser, signIn, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildInitializedEntries, parseSettingsForm } from "@/lib/settings";
 
@@ -51,12 +51,14 @@ export async function saveMonthlyEntries(
   dayCodes: DailyAttendanceCodeInput[]
 ): Promise<SaveMonthlyEntriesResult> {
   try {
+    const currentUser = await requireUser();
     const range = monthRange(month);
     const normalized = normalizeEntries(entries);
     const normalizedDayCodes = normalizeDayCodes(dayCodes, range);
     const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.workEntry.deleteMany({
         where: {
+          userId: currentUser.id,
           workDate: {
             gte: range.start,
             lt: range.end
@@ -65,6 +67,7 @@ export async function saveMonthlyEntries(
       }),
       prisma.dailyAttendanceCode.deleteMany({
         where: {
+          userId: currentUser.id,
           workDate: {
             gte: range.start,
             lt: range.end
@@ -76,6 +79,7 @@ export async function saveMonthlyEntries(
     if (normalized.length > 0) {
       operations.push(prisma.workEntry.createMany({
         data: normalized.map((entry) => ({
+          userId: currentUser.id,
           workDate: new Date(`${entry.date}T00:00:00`),
           rowIndex: entry.rowIndex,
           orderCode: entry.orderCode,
@@ -93,6 +97,7 @@ export async function saveMonthlyEntries(
     if (normalizedDayCodes.length > 0) {
       operations.push(prisma.dailyAttendanceCode.createMany({
         data: normalizedDayCodes.map((dayCode) => ({
+          userId: currentUser.id,
           workDate: new Date(`${dayCode.date}T00:00:00`),
           code: dayCode.code
         }))
@@ -113,10 +118,11 @@ export async function saveMonthlyEntries(
 
 export async function saveSettings(formData: FormData): Promise<ActionResult> {
   try {
+    const currentUser = await requireUser();
     const settings = parseSettingsForm(formData);
     const operations: Prisma.PrismaPromise<unknown>[] = [
       prisma.userSetting.upsert({
-        where: { id: 1 },
+        where: { userId: currentUser.id },
         update: {
           opNo: settings.opNo,
           name: settings.name,
@@ -124,19 +130,22 @@ export async function saveSettings(formData: FormData): Promise<ActionResult> {
           workEndTime: settings.workEndTime
         },
         create: {
-          id: 1,
+          userId: currentUser.id,
           opNo: settings.opNo,
           name: settings.name,
           workStartTime: settings.workStartTime,
           workEndTime: settings.workEndTime
         }
       }),
-      prisma.orderPreset.deleteMany()
+      prisma.orderPreset.deleteMany({
+        where: { userId: currentUser.id }
+      })
     ];
 
     if (settings.orders.length > 0) {
       operations.push(prisma.orderPreset.createMany({
         data: settings.orders.map((order) => ({
+          userId: currentUser.id,
           displayOrder: order.displayOrder,
           orderNo: order.orderNo,
           orderName: order.orderName,
@@ -249,6 +258,7 @@ export async function deleteUser(formData: FormData): Promise<void> {
 
 export async function initializeMonthlyEntries(formData: FormData): Promise<ActionResult> {
   try {
+    const currentUser = await requireUser();
     const month = getFormString(formData, "month");
     const process = getFormString(formData, "process");
     const detail = getFormString(formData, "detail");
@@ -259,7 +269,7 @@ export async function initializeMonthlyEntries(formData: FormData): Promise<Acti
     }
 
     const preset = await prisma.orderPreset.findFirst({
-      where: { orderNo },
+      where: { userId: currentUser.id, orderNo },
       orderBy: [{ displayOrder: "asc" }, { id: "asc" }]
     });
     if (!preset) {
@@ -278,6 +288,7 @@ export async function initializeMonthlyEntries(formData: FormData): Promise<Acti
       operations.push(
         prisma.workEntry.deleteMany({
           where: {
+            userId: currentUser.id,
             workDate: {
               in: entries.map((entry) => new Date(`${entry.date}T00:00:00`))
             },
@@ -288,6 +299,7 @@ export async function initializeMonthlyEntries(formData: FormData): Promise<Acti
         }),
         prisma.workEntry.createMany({
           data: entries.map((entry) => ({
+            userId: currentUser.id,
             workDate: new Date(`${entry.date}T00:00:00`),
             rowIndex: entry.rowIndex,
             orderCode: entry.orderCode,

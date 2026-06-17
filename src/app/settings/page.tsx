@@ -11,8 +11,11 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const currentUser = await requireUser();
   const [setting, presets] = await Promise.all([
-    prisma.userSetting.findUnique({ where: { id: 1 } }),
-    prisma.orderPreset.findMany({ orderBy: [{ displayOrder: "asc" }, { id: "asc" }] })
+    prisma.userSetting.findUnique({ where: { userId: currentUser.id } }),
+    prisma.orderPreset.findMany({
+      where: { userId: currentUser.id },
+      orderBy: [{ displayOrder: "asc" }, { id: "asc" }]
+    })
   ]);
 
   return (
@@ -27,7 +30,7 @@ export default async function SettingsPage() {
           勤怠入力へ
         </Link>
       </header>
-      <SettingsForm settings={toSettingsView(setting, presets)} currentMonth={getMonthValue()} />
+      <SettingsForm settings={toSettingsView(setting, presets, currentUser)} currentMonth={getMonthValue()} />
     </main>
   );
 }

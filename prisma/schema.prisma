@@ -21,6 +21,7 @@ model Attendance {
 
 model WorkEntry {
   id           Int      @id @default(autoincrement())
+  userId       Int
   workDate     DateTime
   rowIndex     Int
   orderCode    String   @db.VarChar(9)
@@ -33,27 +34,33 @@ model WorkEntry {
   workContent  String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([workDate])
+  @@index([userId, workDate])
 }
 
 model DailyAttendanceCode {
   id        Int      @id @default(autoincrement())
-  workDate  DateTime @unique
+  userId    Int
+  workDate  DateTime
   code      String   @db.VarChar(2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([workDate])
+  @@unique([userId, workDate])
+  @@index([userId, workDate])
 }
 
 model UserSetting {
-  id            Int      @id @default(1)
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
   opNo          String   @db.VarChar(3)
   name          String
   workStartTime String   @default("09:00") @db.VarChar(5)
   workEndTime   String   @default("18:00") @db.VarChar(5)
   updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -65,12 +72,17 @@ model User {
   isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  workEntries  WorkEntry[]
+  dayCodes     DailyAttendanceCode[]
+  setting      UserSetting?
+  orderPresets OrderPreset[]
 
   @@index([loginId])
 }
 
 model OrderPreset {
   id           Int      @id @default(autoincrement())
+  userId       Int
   displayOrder Int
   orderNo      String   @db.VarChar(9)
   orderName    String
@@ -80,6 +92,7 @@ model OrderPreset {
   time2End     String   @db.VarChar(5)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([displayOrder])
+  @@index([userId, displayOrder])
 }

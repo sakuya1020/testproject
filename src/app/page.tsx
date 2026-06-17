@@ -23,6 +23,7 @@ export default async function Home({ searchParams }: PageProps) {
   const [entries, orderOptions, storedDayCodes] = await Promise.all([
     prisma.workEntry.findMany({
       where: {
+        userId: currentUser.id,
         workDate: {
           gte: range.start,
           lt: range.end
@@ -31,10 +32,12 @@ export default async function Home({ searchParams }: PageProps) {
       orderBy: [{ workDate: "asc" }, { rowIndex: "asc" }, { id: "asc" }]
     }),
     prisma.orderPreset.findMany({
+      where: { userId: currentUser.id },
       orderBy: [{ displayOrder: "asc" }, { id: "asc" }]
     }),
     prisma.dailyAttendanceCode.findMany({
       where: {
+        userId: currentUser.id,
         workDate: {
           gte: range.start,
           lt: range.end

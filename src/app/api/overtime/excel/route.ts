@@ -1,4 +1,5 @@
 import { getMonthValue, monthRange } from "@/lib/attendance";
+import { requireUser } from "@/lib/auth";
 import { buildOvertimeReportExcel } from "@/lib/overtimeReportExcel";
 import { prisma } from "@/lib/prisma";
 
@@ -6,12 +7,14 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request): Promise<Response> {
+  const currentUser = await requireUser();
   const url = new URL(request.url);
   const month = url.searchParams.get("month") ?? getMonthValue();
   const range = monthRange(month);
   const [records, settings] = await Promise.all([
     prisma.workEntry.findMany({
       where: {
+        userId: currentUser.id,
         workDate: {
           gte: range.start,
           lt: range.end
@@ -20,13 +23,13 @@ export async function GET(request: Request): Promise<Response> {
       orderBy: [{ workDate: "asc" }, { rowIndex: "asc" }, { id: "asc" }]
     }),
     prisma.userSetting.findUnique({
-      where: { id: 1 }
+      where: { userId: currentUser.id }
     })
   ]);
 
   const workbookBuffer = await buildOvertimeReportExcel(records, range.value, {
     department: "",
-    name: settings?.name ?? "",
+    name: settings?.name ?? currentUser.name,
     workStartTime: settings?.workStartTime ?? "09:00",
     workEndTime: settings?.workEndTime ?? "18:00"
   });

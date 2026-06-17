@@ -21,10 +21,14 @@ export type SettingsView = {
 
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export function toSettingsView(setting: UserSetting | null, presets: OrderPreset[]): SettingsView {
+export function toSettingsView(
+  setting: UserSetting | null,
+  presets: OrderPreset[],
+  fallback?: { opNo: string; name: string }
+): SettingsView {
   return {
-    opNo: setting?.opNo ?? "",
-    name: setting?.name ?? "",
+    opNo: setting?.opNo ?? fallback?.opNo ?? "",
+    name: setting?.name ?? fallback?.name ?? "",
     workStartTime: setting?.workStartTime ?? "09:00",
     workEndTime: setting?.workEndTime ?? "18:00",
     orders: Array.from({ length: 10 }, (_, index) => {
