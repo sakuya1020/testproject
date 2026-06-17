@@ -3,6 +3,7 @@ node_modules
 out
 dist
 work/
+outputs/
 .env
 .env*.local
 *.log

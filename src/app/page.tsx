@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { MonthAttendanceForm, type InitialDayCode } from "@/app/MonthAttendanceForm";
+import { AppHeader } from "@/app/AppHeader";
 import { daysInMonth, formatDateKey, getMonthValue, monthRange, toWorkEntryView } from "@/lib/attendance";
 import { defaultAttendanceCode, isAttendanceCode, type AttendanceCode } from "@/lib/attendanceCodes";
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isJapaneseHoliday } from "@/lib/settings";
 
@@ -14,6 +16,7 @@ type PageProps = {
 };
 
 export default async function Home({ searchParams }: PageProps) {
+  const currentUser = await requireUser();
   const params = searchParams ? await searchParams : {};
   const month = params.month ?? getMonthValue();
   const range = monthRange(month);
@@ -43,6 +46,7 @@ export default async function Home({ searchParams }: PageProps) {
 
   return (
     <main className="page">
+      <AppHeader currentUser={currentUser} />
       <header className="pageHeader">
         <div>
           <p className="eyebrow">Attendance prototype</p>

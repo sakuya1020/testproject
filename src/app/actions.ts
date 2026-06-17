@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { monthRange, normalizeEntries, type WorkEntryInput } from "@/lib/attendance";
 import { isAttendanceCode, type DailyAttendanceCodeInput } from "@/lib/attendanceCodes";
+import { ensureInitialAdmin, hashPassword, requireAdmin, signIn, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildInitializedEntries, parseSettingsForm } from "@/lib/settings";
 
@@ -16,6 +18,32 @@ export type ActionResult = {
   ok: boolean;
   message: string;
 };
+
+export async function login(_state: ActionResult, formData: FormData): Promise<ActionResult> {
+  await ensureInitialAdmin();
+  const loginId = getFormString(formData, "loginId");
+  const password = getFormString(formData, "password");
+
+  if (!loginId || !password) {
+    return { ok: false, message: "IDとパスワードを入力してください。" };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { loginId }
+  });
+
+  if (!user || user.passwordHash !== hashPassword(password)) {
+    return { ok: false, message: "IDまたはパスワードが正しくありません。" };
+  }
+
+  await signIn(user.id);
+  redirect("/");
+}
+
+export async function logout(): Promise<void> {
+  await signOut();
+  redirect("/login");
+}
 
 export async function saveMonthlyEntries(
   month: string,
@@ -133,6 +161,92 @@ export async function saveSettings(formData: FormData): Promise<ActionResult> {
   }
 }
 
+export async function createUser(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const input = parseUserForm(formData, false);
+
+  await prisma.user.create({
+    data: {
+      loginId: input.loginId,
+      passwordHash: hashPassword(input.password),
+      name: input.name,
+      opNo: input.opNo,
+      isAdmin: input.isAdmin
+    }
+  });
+
+  revalidatePath("/users");
+  redirect("/users");
+}
+
+export async function updateUser(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = getFormId(formData);
+  const input = parseUserForm(formData, true);
+  const current = await prisma.user.findUnique({ where: { id } });
+
+  if (!current) {
+    throw new Error("ユーザーが見つかりません。");
+  }
+
+  if (current.isAdmin && !input.isAdmin) {
+    const adminCount = await prisma.user.count({
+      where: { isAdmin: true }
+    });
+
+    if (adminCount <= 1) {
+      throw new Error("管理者ユーザーは最低1人必要です。");
+    }
+  }
+
+  const data: Prisma.UserUpdateInput = {
+    loginId: input.loginId,
+    name: input.name,
+    opNo: input.opNo,
+    isAdmin: input.isAdmin
+  };
+
+  if (input.password) {
+    data.passwordHash = hashPassword(input.password);
+  }
+
+  await prisma.user.update({
+    where: { id },
+    data
+  });
+
+  revalidatePath("/users");
+  redirect("/users");
+}
+
+export async function deleteUser(formData: FormData): Promise<void> {
+  const currentUser = await requireAdmin();
+  const id = getFormId(formData);
+
+  if (id === currentUser.id) {
+    redirect("/users");
+  }
+
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) {
+    redirect("/users");
+  }
+
+  if (target.isAdmin) {
+    const adminCount = await prisma.user.count({
+      where: { isAdmin: true }
+    });
+
+    if (adminCount <= 1) {
+      redirect("/users");
+    }
+  }
+
+  await prisma.user.delete({ where: { id } });
+  revalidatePath("/users");
+  redirect("/users");
+}
+
 export async function initializeMonthlyEntries(formData: FormData): Promise<ActionResult> {
   try {
     const month = getFormString(formData, "month");
@@ -206,6 +320,35 @@ export async function initializeMonthlyEntries(formData: FormData): Promise<Acti
 function getFormString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getFormId(formData: FormData): number {
+  const id = Number(getFormString(formData, "id"));
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new Error("ユーザーIDが不正です。");
+  }
+
+  return id;
+}
+
+function parseUserForm(formData: FormData, allowEmptyPassword: boolean) {
+  const loginId = getFormString(formData, "loginId");
+  const password = getFormString(formData, "password");
+  const name = getFormString(formData, "name");
+  const opNo = getFormString(formData, "opNo");
+
+  if (!loginId || !name || !opNo || (!allowEmptyPassword && !password)) {
+    throw new Error("ユーザー情報を入力してください。");
+  }
+
+  return {
+    loginId,
+    password,
+    name,
+    opNo,
+    isAdmin: formData.get("isAdmin") === "on"
+  };
 }
 
 function normalizeDayCodes(

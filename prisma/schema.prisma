@@ -56,6 +56,19 @@ model UserSetting {
   updatedAt     DateTime @updatedAt
 }
 
+model User {
+  id           Int      @id @default(autoincrement())
+  loginId      String   @unique @db.VarChar(50)
+  passwordHash String
+  name         String
+  opNo         String   @db.VarChar(20)
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([loginId])
+}
+
 model OrderPreset {
   id           Int      @id @default(autoincrement())
   displayOrder Int

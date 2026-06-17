@@ -43,6 +43,31 @@ select {
   margin-bottom: 18px;
 }
 
+.appHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.currentUser {
+  font-weight: 700;
+}
+
+.appNav,
+.userActions,
+.formActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: var(--muted);
@@ -116,6 +141,12 @@ button,
   line-height: 1.2;
 }
 
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 37px;
+}
+
 button:hover,
 .downloadButton:hover {
   background: var(--primary-dark);
@@ -133,6 +164,14 @@ button:disabled {
 
 .secondaryButton:hover {
   background: #d6e2f2;
+}
+
+.dangerButton {
+  background: var(--danger);
+}
+
+.dangerButton:hover {
+  background: #8f1b12;
 }
 
 .secondaryDownloadButton {
@@ -391,6 +430,84 @@ output {
   grid-template-columns: repeat(4, minmax(140px, 1fr));
 }
 
+.loginPage {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 20px;
+}
+
+.loginPanel {
+  width: min(100%, 420px);
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(23, 32, 51, 0.08);
+}
+
+.loginLead {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.loginForm,
+.userForm {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.loginForm label,
+.userForm label {
+  display: grid;
+  gap: 6px;
+  color: #344054;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.checkboxLabel {
+  display: flex !important;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+}
+
+.checkboxLabel input {
+  width: 18px;
+  height: 18px;
+}
+
+.userTable {
+  overflow-x: auto;
+}
+
+.userTableHead,
+.userTableRow {
+  display: grid;
+  grid-template-columns: 160px minmax(180px, 1fr) 130px 110px 220px;
+  gap: 10px;
+  min-width: 760px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.userTableHead {
+  color: var(--muted);
+  background: var(--panel-soft);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.userTableRow {
+  border-bottom: 1px solid #edf1f6;
+}
+
+.userTableRow:last-child {
+  border-bottom: 0;
+}
+
 @media (max-width: 760px) {
   .page {
     width: min(100% - 16px, 1440px);
@@ -416,5 +533,17 @@ output {
   .sectionHeader {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .appHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .appNav,
+  .appNav form,
+  .appNav button,
+  .appNav .navLink {
+    width: 100%;
   }
 }
